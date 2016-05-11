@@ -1,5 +1,15 @@
 #!/bin/sh
 
+# Get location of the script itself .. thanks SO ! http://stackoverflow.com/a/246128
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+SOURCE="$(readlink "$SOURCE")"
+[[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+PROJECT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+
 CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli"
 
 ARCHS="arm64 x86_64 i386 armv7 armv7s"
@@ -13,7 +23,13 @@ SCRATCH="scratch-x264"
 THIN=`pwd`/"thin-x264"
 
 # the one included in x264 does not work; specify full path to working one
-GAS_PREPROCESSOR=/usr/local/bin/gas-preprocessor.pl
+#gas-preprocessor.pl: https://github.com/libav/gas-preprocessor.git
+#or gas-preprocessor.pl in x264 source: x264/tools/gas-preprocessor.pl
+#At least in x264 git_version=3b70645597 works
+GAS_PREPROCESSOR="$PROJECT_DIR/gas-preprocessor/gas-preprocessor.pl"
+#GAS_PREPROCESSOR="$PROJECT_DIR/$SOURCE/tools/gas-preprocessor.pl"
+
+
 
 COMPILE="y"
 LIPO="y"
@@ -75,7 +91,7 @@ then
 		CC="xcrun -sdk $XCRUN_SDK clang"
 		if [ $PLATFORM = "iPhoneOS" ]
 		then
-		    export AS="gas-preprocessor.pl $XARCH -- $CC"
+		    export AS="$GAS_PREPROCESSOR $XARCH -- $CC"
 		else
 		    export -n AS
 		fi
