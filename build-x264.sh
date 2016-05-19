@@ -7,7 +7,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 SOURCE="$(readlink "$SOURCE")"
 [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
 done
-PROJECT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+CURRENT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 
 CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli"
@@ -15,19 +15,21 @@ CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli"
 ARCHS="arm64 x86_64 i386 armv7 armv7s"
 
 # directories
-SOURCE="x264"
-FAT="x264-iOS"
+SOURCE_CODE_DIR="$CURRENT_DIR/../extra/x264"
+BUILD_OUTPUT_DIR="$CURRENT_DIR/build"
 
-SCRATCH="scratch-x264"
+
+FAT="$BUILD_OUTPUT_DIR/x264-iOS"
+SCRATCH="$BUILD_OUTPUT_DIR/scratch-x264"
 # must be an absolute path
-THIN=`pwd`/"thin-x264"
+THIN="$BUILD_OUTPUT_DIR/thin-x264"
 
 # the one included in x264 does not work; specify full path to working one
 #gas-preprocessor.pl: https://github.com/libav/gas-preprocessor.git
 #or gas-preprocessor.pl in x264 source: x264/tools/gas-preprocessor.pl
 #At least in x264 git_version=3b70645597 works
-GAS_PREPROCESSOR="$PROJECT_DIR/gas-preprocessor/gas-preprocessor.pl"
-#GAS_PREPROCESSOR="$PROJECT_DIR/$SOURCE/tools/gas-preprocessor.pl"
+#GAS_PREPROCESSOR="$CURRENT_DIR/gas-preprocessor/gas-preprocessor.pl"
+GAS_PREPROCESSOR="$SOURCE_CODE_DIR/tools/gas-preprocessor.pl"
 
 
 
@@ -52,7 +54,6 @@ fi
 
 if [ "$COMPILE" ]
 then
-	CWD=`pwd`
 	for ARCH in $ARCHS
 	do
 		echo "building $ARCH..."
@@ -98,7 +99,7 @@ then
 		CXXFLAGS="$CFLAGS"
 		LDFLAGS="$CFLAGS"
 
-		CC=$CC $CWD/$SOURCE/configure \
+		CC=$CC $SOURCE_CODE_DIR/configure \
 		    $CONFIGURE_FLAGS \
 		    $HOST \
 		    --extra-cflags="$CFLAGS" \
@@ -110,7 +111,6 @@ then
 		ln -s $GAS_PREPROCESSOR extras
 
 		make -j3 install || exit 1
-		cd $CWD
 	done
 fi
 
@@ -119,14 +119,15 @@ then
 	echo "building fat binaries..."
 	mkdir -p $FAT/lib
 	set - $ARCHS
-	CWD=`pwd`
+
 	cd $THIN/$1/lib
 	for LIB in *.a
 	do
-		cd $CWD
+#        echo `pwd`
 		lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB
 	done
 
-	cd $CWD
 	cp -rf $THIN/$1/include $FAT
+
+    cd $CURRENT_DIR
 fi
